@@ -1,0 +1,25 @@
+{
+  "name": "qvc",
+  "version": "0.0.0",
+  "description": "0.0.1",
+  "main": "qvc.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/decojs/qvc-node"
+  },
+  "keywords": [
+    "qvc",
+    "decojs"
+  ],
+  "author": "Marius Gundersen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/decojs/qvc-node/issues"
+  },
+  "dependencies": {
+    "raw-body": "~1.1.2"
+  }
+}
