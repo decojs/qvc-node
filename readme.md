@@ -29,22 +29,23 @@ and calls the second parameter with the result (standard node.js callback style)
 ```javascript
 var qvc = require('qvc');
 
-module.exports = {
-  load: qvc.query(function(query, done){
+module.exports = [
+  qvc.query('load', function(query, done){
     console.log("load", query.name);
 
-    var content = //load data from somewhere...
-
-    done(null, {name:query.name, content:content});
+    loadDataAsync(function(err, result){
+      //transform the result somehow
+      done(err, result);
+    });
   }),
-  save: qvc.command(function(command, done){
+  qvc.command('save', function(command, done){
     console.log("save", command.name);
-
-    //actually save it
-
-    done(null, true);
+    
+    saveDataAsync(command.name, command.content, function(err, success){
+      done(err, success);
+    });
   })
-};
+];
 ```
 
 This file contains both a command and a query handler, and can be expanded in the future with
@@ -54,27 +55,20 @@ handlers for both commands and queries.
 A single routing file is needed for all this to work. An example is presented here:
 
 ```javascript
-var setupQVC = require('qvc').setup;
-var handlers = require('./handlers');
-var connect = require('connect');
-var router = require('urlrouter');
+var qvc = require('qvc');
+var express = require('express');
+var bodyParser = require('body-parser');
 
-var qvc = setupQVC({
-  commands:{
-    'save': handlers.save
-  },
-  queries:{
-    'load': handlers.load,
-  }
-});
+var app = express();
 
-connect.use(router(function(app){
-  app.post('qvc/command/:name', qvc.command);
-  app.post('qvc/query/:name', qvc.query);
-  app.get('qvc/constraints/:name', qvc.constraints);
-}));
+app.use(bodyParser.json());
 
-connect.listen(80);
+app.use('/qvc', qvc(
+  require('./handlers'),
+  //add other handlers here...
+));
+
+app.listen(80);
 
 
 ```

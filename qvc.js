@@ -1,28 +1,4 @@
-var getRawBody = require('raw-body')
-var querystringParse = require('querystring').parse;
-var extend = require('util')._extend;
-
-function parseNameAndBody(func){
-  return function(req, res, next){
-    var name = req.params.name;
-    getRawBody(req, function(err, result){
-      if(err){
-        res.statusCode = 500;
-        return next(err);
-      }
-
-      var body = querystringParse(result.toString('utf8'));
-      body.parameters = body.parameters || "{}";
-
-      req.qvc = {
-        name: name,
-        parameters: JSON.parse(body.parameters)
-      };
-
-      func(req, res, next);
-    });    
-  }
-}
+var express = require('express');
 
 function tryToCall(func){
   return function(req, res, next){
@@ -34,14 +10,28 @@ function tryToCall(func){
   };
 }
 
+function flatten(list){
+  return Array.prototype.reduce.call(list, function(a,b){
+    return a.concat(b);
+  },[]);
+}
 
+function objectify(list){
+  return list.reduce(function(a,b){
+    a[b.executableName] = b;
+    return a;
+  },Object.create(null));
+}
 
-function setup(options){
-
+function qvc(){
+  var router = express.Router();
+  console.log(arguments);
+  var allExecutables = flatten(arguments);
+  console.log(allExecutables[0]);
   var executables = {
-    commandList: options.commands,
-    queryList: options.queries,
-    executableList: extend(options.commands, options.queries)
+    commandList: objectify(allExecutables.filter(function(e){return e.type == 'command';})),
+    queryList: objectify(allExecutables.filter(function(e){return e.type == 'query';})),
+    executableList: objectify(allExecutables)
   };
 
   function findExecutable(name, type){
@@ -55,7 +45,7 @@ function setup(options){
   }
 
   function constraints(req, res, next){
-    var executable = findExecutable(req.qvc.name, 'executable');
+    var executable = findExecutable(req.params.name, 'executable');
     if(executable == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not found"}));
     }else{
@@ -63,11 +53,11 @@ function setup(options){
     }
   }
   function command(req, res, next){
-    var handle = findExecutable(req.qvc.name, 'command');
+    var handle = findExecutable(req.params.name, 'command');
     if(handle == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not a command"}));
     }else{
-      handle(req.qvc.parameters, function(err, result){
+      handle(req.body.parameters, function(err, result){
         if(err){
           res.end(JSON.stringify({valid:true, success: false}));
         }else{
@@ -77,11 +67,11 @@ function setup(options){
     }
   }
   function query(req, res, next){
-    var handle = findExecutable(req.qvc.name, 'query');
+    var handle = findExecutable(req.params.name, 'query');
     if(handle == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not a query"}));
     }else{
-      handle(req.qvc.parameters, function(err, result){
+      handle(req.body.parameters, function(err, result){
         if(err){
           res.end(JSON.stringify({valid:true, success: false, result: err}));
         }else{
@@ -91,16 +81,14 @@ function setup(options){
     }
   }
 
-  return {
-    constraints: parseNameAndBody(tryToCall(constraints)),
-    command: parseNameAndBody(tryToCall(command)),
-    query: parseNameAndBody(tryToCall(query)),
-  };
+  router.post('/command/:name', tryToCall(command));
+  router.post('/query/:name', tryToCall(query));
+  router.get('/constraints/:name', tryToCall(constraints));
+  
+  return router;
 }
 
+qvc.command = require('./command');
+qvc.query = require('./query');
 
-module.exports = {
-  setup: setup,
-  command: require('./command'),
-  query: require('./query')
-}
+module.exports = qvc;

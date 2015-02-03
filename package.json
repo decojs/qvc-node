@@ -1,7 +1,7 @@
 {
   "name": "qvc",
-  "version": "0.0.1",
-  "description": "0.0.1",
+  "version": "0.1.0",
+  "description": "Handle commands and queries from the client with validation",
   "main": "qvc.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/decojs/qvc-node/issues"
   },
-  "dependencies": {
-    "raw-body": "~1.1.2"
+  "peerDependencies": {
+    "express": "~4.11.1"
   }
 }

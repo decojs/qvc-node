@@ -1,5 +1,6 @@
-module.exports = function query(handle, constraints){
+module.exports = function query(name, handle, constraints){
   handle.type = "query";
+  handle.executableName = name;
   handle.constraints = constraints || {};
   return handle;
 }
