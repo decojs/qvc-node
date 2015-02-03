@@ -25,9 +25,9 @@ function objectify(list){
 
 function qvc(){
   var router = express.Router();
-  console.log(arguments);
+  
   var allExecutables = flatten(arguments);
-  console.log(allExecutables[0]);
+  
   var executables = {
     commandList: objectify(allExecutables.filter(function(e){return e.type == 'command';})),
     queryList: objectify(allExecutables.filter(function(e){return e.type == 'query';})),

@@ -1,6 +1,6 @@
 {
   "name": "qvc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Handle commands and queries from the client with validation",
   "main": "qvc.js",
   "scripts": {
