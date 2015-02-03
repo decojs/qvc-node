@@ -57,7 +57,7 @@ function qvc(){
     if(handle == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not a command"}));
     }else{
-      handle(req.body.parameters, function(err, result){
+      handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
           res.end(JSON.stringify({valid:true, success: false}));
         }else{
@@ -71,7 +71,7 @@ function qvc(){
     if(handle == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not a query"}));
     }else{
-      handle(req.body.parameters, function(err, result){
+      handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
           res.end(JSON.stringify({valid:true, success: false, result: err}));
         }else{
