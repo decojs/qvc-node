@@ -51,7 +51,7 @@ This file contains both a command and a query handler, and can be expanded in th
 additional commands and queries. A project can consist of several files like this, with multiple
 handlers for both commands and queries. 
 
-A single routing config file is needed for this to all work. An example is presented here:
+A single routing file is needed for all this to work. An example is presented here:
 
 ```javascript
 var setupQVC = require('qvc').setup;

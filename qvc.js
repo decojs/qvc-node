@@ -67,8 +67,13 @@ function setup(options){
     if(handle == null){
       res.end(JSON.stringify({valid:true, success: false, exception: "not a command"}));
     }else{
-      handle(req.qvc.parameters);
-      res.end(JSON.stringify({valid:true, success: true}));
+      handle(req.qvc.parameters, function(err, result){
+        if(err){
+          res.end(JSON.stringify({valid:true, success: false}));
+        }else{
+          res.end(JSON.stringify({valid:true, success: true}));
+        }
+      });
     }
   }
   function query(req, res, next){
