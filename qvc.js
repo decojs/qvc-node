@@ -2,10 +2,11 @@ var urlrouter = require('urlrouter');
 
 function tryToCall(func, debug){
   return function(req, res, next){
+    res.setHeader('Content-Type', 'application/json');
     try{
       func(req, res, next);
     }catch(e){
-      res.end(withException(e, debug));
+      endWithException(res, e, debug);
     }
   };
 }
@@ -42,8 +43,22 @@ function jsonError(error){
   return error;
 }
 
-function withException(error, debug){
-  return JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null});
+function endWithException(res, error, debug){
+  res.status(500);
+  res.end(JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null}));
+}
+
+function getConstraints(constraints){
+  return {
+    parameters: Object.keys(constraints).map(function(key){
+      return {
+        name: key,
+        constraints: Array.isArray(constraints[key]) ? constraints[key].map(function(constraint){
+          return constraint.constraint()
+        }) : [constraints[key].constraint()]
+      };
+    })
+  }
 }
 
 function qvc(options){
@@ -74,19 +89,19 @@ function qvc(options){
   function constraints(req, res, next){
     var executable = findExecutable(req.params.name, 'executable');
     if(executable == null){
-      res.end(withException("not found", options.debug));
+      endWithException(res, "not found", options.debug);
     }else{
-      res.end(JSON.stringify(executable.constraints));
+      res.end(JSON.stringify(getConstraints(executable.constraints)));
     }
   }
   function command(req, res, next){
     var handle = findExecutable(req.params.name, 'command');
     if(handle == null){
-      res.end(withException("not a command", options.debug));
+      endWithException(res, "not a command", options.debug);
     }else{
       handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
-          res.end(withException(err, options.debug));
+          endWithException(res, err, options.debug);
         }else{
           res.end(JSON.stringify({valid:true, success: true}));
         }
@@ -96,11 +111,11 @@ function qvc(options){
   function query(req, res, next){
     var handle = findExecutable(req.params.name, 'query');
     if(handle == null){
-      res.end(withException("not a query", options.debug));
+      endWithException(res, "not a query", options.debug);
     }else{
       handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
-          res.end(withException(err, options.debug));
+          endWithException(res, err, options.debug);
         }else{
           res.end(JSON.stringify({valid:true, success: true, result: result}));
         }
