@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/decojs/qvc-node/issues"
   },
-  "peerDependencies": {
-    "express": "~4.11.1"
+  "dependencies": {
+    "urlrouter": "~0.5.4"
   }
 }

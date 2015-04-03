@@ -1,17 +1,17 @@
-var express = require('express');
+var urlrouter = require('urlrouter');
 
-function tryToCall(func){
+function tryToCall(func, debug){
   return function(req, res, next){
     try{
       func(req, res, next);
     }catch(e){
-      res.end(JSON.stringify({valid:true, success: false, exception: e.stack}));
+      res.end(withException(e, debug));
     }
   };
 }
 
 function flatten(list){
-  return Array.prototype.reduce.call(list, function(a,b){
+  return list.reduce(function(a,b){
     return a.concat(b);
   },[]);
 }
@@ -23,10 +23,37 @@ function objectify(list){
   },Object.create(null));
 }
 
-function qvc(){
-  var router = express.Router();
+function jsonError(error){
+  if(error instanceof Error){
+    Object.defineProperty(error, 'toJSON', {
+      value: function () {
+          var alt = {};
+
+          Object.getOwnPropertyNames(this).forEach(function (key) {
+              alt[key] = this[key];
+          }, this);
+
+          return alt;
+      },
+      configurable: true,
+    });
+  }
   
-  var allExecutables = flatten(arguments);
+  return error;
+}
+
+function withException(error, debug){
+  return JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null});
+}
+
+function qvc(options){
+  var options = Array.prototype.filter.call(arguments, function(argument){
+    return !Array.isArray(argument);
+  })[0]||{};
+  
+  var allExecutables = flatten(Array.prototype.filter.call(arguments, function(argument){
+    return Array.isArray(argument);
+  }));
   
   var executables = {
     commandList: objectify(allExecutables.filter(function(e){return e.type == 'command';})),
@@ -47,7 +74,7 @@ function qvc(){
   function constraints(req, res, next){
     var executable = findExecutable(req.params.name, 'executable');
     if(executable == null){
-      res.end(JSON.stringify({valid:true, success: false, exception: "not found"}));
+      res.end(withException("not found", options.debug));
     }else{
       res.end(JSON.stringify(executable.constraints));
     }
@@ -55,11 +82,11 @@ function qvc(){
   function command(req, res, next){
     var handle = findExecutable(req.params.name, 'command');
     if(handle == null){
-      res.end(JSON.stringify({valid:true, success: false, exception: "not a command"}));
+      res.end(withException("not a command", options.debug));
     }else{
       handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
-          res.end(JSON.stringify({valid:true, success: false}));
+          res.end(withException(err, options.debug));
         }else{
           res.end(JSON.stringify({valid:true, success: true}));
         }
@@ -69,11 +96,11 @@ function qvc(){
   function query(req, res, next){
     var handle = findExecutable(req.params.name, 'query');
     if(handle == null){
-      res.end(JSON.stringify({valid:true, success: false, exception: "not a query"}));
+      res.end(withException("not a query", options.debug));
     }else{
       handle(JSON.parse(req.body.parameters), function(err, result){
         if(err){
-          res.end(JSON.stringify({valid:true, success: false, result: err}));
+          res.end(withException(err, options.debug));
         }else{
           res.end(JSON.stringify({valid:true, success: true, result: result}));
         }
@@ -81,11 +108,11 @@ function qvc(){
     }
   }
 
-  router.post('/command/:name', tryToCall(command));
-  router.post('/query/:name', tryToCall(query));
-  router.get('/constraints/:name', tryToCall(constraints));
-  
-  return router;
+  return urlrouter(function(app){
+    app.post('/command/:name', tryToCall(command, options.debug));
+    app.post('/query/:name', tryToCall(query, options.debug));
+    app.get('/constraints/:name', tryToCall(constraints, options.debug));
+  });
 }
 
 qvc.command = require('./command');
