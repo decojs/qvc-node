@@ -1,15 +1,20 @@
 var urlrouter = require('urlrouter');
 var validate = require('./src/validate');
 var getConstraints = require('./src/getConstraints');
+var Promise = require('promise');
 
 function tryToCall(func, debug){
   return function(req, res, next){
-    res.setHeader('Content-Type', 'application/json');
-    try{
-      func(req, res, next);
-    }catch(e){
-      endWithException(res, e, debug);
-    }
+    func(req.params.name, req.body.parameters)
+    .then(function(result){
+      return JSON.stringify(result);
+    }, function(error){
+      res.status(500);
+      return JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null});
+    }).then(function(response){
+      res.setHeader('Content-Type', 'application/json');
+      res.end(response);
+    })
   };
 }
 
@@ -45,15 +50,6 @@ function jsonError(error){
   return error;
 }
 
-function endWithException(res, error, debug){
-  res.status(500);
-  res.end(JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null}));
-}
-
-function endWithInvalid(res, violations){
-  res.end(JSON.stringify({valid:false, success: false, violations: violations}));
-}
-
 function qvc(options){
   var options = Array.prototype.filter.call(arguments, function(argument){
     return !Array.isArray(argument);
@@ -71,63 +67,55 @@ function qvc(options){
 
   function findExecutable(name, type){
     var handler = executables[type+'List'][name];
-
+    
     if(type != 'executable' && (handler == null || handler.type != type)){
-      return null;
+      return Promise.reject();
     }else{
-      return handler;
+      return Promise.resolve(handler);
     }
   }
 
-  function constraints(req, res, next){
-    var executable = findExecutable(req.params.name, 'executable');
-    if(executable == null){
-      endWithException(res, "not found", options.debug);
-    }else{
-      res.end(JSON.stringify(getConstraints(executable.constraints)));
-    }
+  function constraints(name){
+    return findExecutable(name, 'executable')
+    .then(function(executable){
+      return getConstraints(executable.constraints);
+    }, function(){
+      throw "not found";
+    });
   }
   
-  function command(req, res, next){
-    var handle = findExecutable(req.params.name, 'command');
-    if(handle == null){
-      endWithException(res, "not a command", options.debug);
-    }else{
-      var command = JSON.parse(req.body.parameters);
+  function command(name, parameters){
+    return findExecutable(name, 'command')
+    .then(function(handle){
+      var command = JSON.parse(parameters);
       var violations = validate(command, handle.constraint);
       if(violations.length){
-        endWithInvalid(res, violations);
+        return {valid:false, success: false, violations: violations};
       }else{
-        handle(command, function(err, result){
-          if(err){
-            endWithException(res, err, options.debug);
-          }else{
-            res.end(JSON.stringify({valid:true, success: true}));
-          }
-        });
+        return handle(command);
       }
-    }
+    }, function(){
+      throw "not a command";
+    }).then(function(){
+      return {valid: true, success: true};
+    });
   }
   
-  function query(req, res, next){
-    var handle = findExecutable(req.params.name, 'query');
-    if(handle == null){
-      endWithException(res, "not a query", options.debug);
-    }else{
-      var query = JSON.parse(req.body.parameters);
+  function query(name, parameters){
+    return findExecutable(name, 'query')
+    .then(function(handle){
+      var query = JSON.parse(parameters);
       var violations = validate(query, handle.constraint);
       if(violations.length){
-        endWithInvalid(res, violations);
+        return {valid:false, success: false, violations: violations};
       }else{
-        handle(query, function(err, result){
-          if(err){
-            endWithException(res, err, options.debug);
-          }else{
-            res.end(JSON.stringify({valid:true, success: true, result: result}));
-          }
-        });
+        return handle(query);
       }
-    }
+    }, function(){
+      throw "not a query";
+    }).then(function(result){
+      return {valid: true, success: true, result: result};
+    });
   }
 
   return urlrouter(function(app){

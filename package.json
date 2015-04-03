@@ -20,7 +20,8 @@
     "url": "https://github.com/decojs/qvc-node/issues"
   },
   "dependencies": {
-    "urlrouter": "~0.5.4"
+    "urlrouter": "~0.5.4",
+    "promise": "~6.1.0"
   },
   "devDependencies": {
     "mocha": "~2.2.1"
