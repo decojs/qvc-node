@@ -1,5 +1,6 @@
 var urlrouter = require('urlrouter');
 var validate = require('./src/validate');
+var getConstraints = require('./src/getConstraints');
 
 function tryToCall(func, debug){
   return function(req, res, next){
@@ -29,13 +30,13 @@ function jsonError(error){
   if(error instanceof Error){
     Object.defineProperty(error, 'toJSON', {
       value: function () {
-          var alt = {};
+        var alt = {};
 
-          Object.getOwnPropertyNames(this).forEach(function (key) {
-              alt[key] = this[key];
-          }, this);
+        Object.getOwnPropertyNames(this).forEach(function (key) {
+            alt[key] = this[key];
+        }, this);
 
-          return alt;
+        return alt;
       },
       configurable: true,
     });
@@ -51,19 +52,6 @@ function endWithException(res, error, debug){
 
 function endWithInvalid(res, violations){
   res.end(JSON.stringify({valid:false, success: false, violations: violations}));
-}
-
-function getConstraints(constraints){
-  return {
-    parameters: Object.keys(constraints).map(function(key){
-      return {
-        name: key,
-        constraints: Array.isArray(constraints[key]) ? constraints[key].map(function(constraint){
-          return constraint.constraint()
-        }) : [constraints[key].constraint()]
-      };
-    })
-  }
 }
 
 function qvc(options){

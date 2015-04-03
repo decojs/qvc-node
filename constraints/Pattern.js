@@ -5,12 +5,9 @@ function Pattern(regex, message){
 
 Pattern.prototype.constraint = function(){
   return {
-    name: "Pattern",
-    attributes: {
-      message: this.message,
-      regexp: this.regex.source,
-      flags: this.regex.ignoreCase ? ['CASE_INSENSITIVE'] : []
-    }
+    message: this.message,
+    regexp: this.regex.source,
+    flags: this.regex.ignoreCase ? ['CASE_INSENSITIVE'] : []
   };
 };
 

@@ -4,10 +4,7 @@ function NotEmpty(message){
 
 NotEmpty.prototype.constraint = function(){
   return {
-    name: "NotEmpty",
-    attributes: {
-      message: this.message
-    }
+    message: this.message
   };
 };
 
