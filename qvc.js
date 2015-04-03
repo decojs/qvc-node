@@ -48,6 +48,34 @@ function endWithException(res, error, debug){
   res.end(JSON.stringify({valid:true, success: false, exception: debug ? jsonError(error) : null}));
 }
 
+function endWithInvalid(res, violations){
+  res.end(JSON.stringify({valid:false, success: false, violations: violations}));
+}
+
+function validate(executable, handler){
+  return Object.keys(handler.constraints || {})
+  .map(function(key){
+    return {
+      fieldName: key,
+      constraints: Array.isArray(handler.constraints[key]) ? handler.constraints[key] : [handler.constraints[key]],
+      value: key.split('.').reduce(function(object, key){
+        return object[key];
+      }, executable)
+    }
+  }).map(function(field){
+    return {
+      fieldName: field.fieldName,
+      message: field.constraints.filter(function(constraint){
+        return !constraint.isValid(field.value);
+      }).map(function(constraint){
+        return constraint.message;
+      })[0]
+    };
+  }).filter(function(result){
+    return result.message;
+  });
+}
+
 function getConstraints(constraints){
   return {
     parameters: Object.keys(constraints).map(function(key){
@@ -94,32 +122,46 @@ function qvc(options){
       res.end(JSON.stringify(getConstraints(executable.constraints)));
     }
   }
+  
   function command(req, res, next){
     var handle = findExecutable(req.params.name, 'command');
     if(handle == null){
       endWithException(res, "not a command", options.debug);
     }else{
-      handle(JSON.parse(req.body.parameters), function(err, result){
-        if(err){
-          endWithException(res, err, options.debug);
-        }else{
-          res.end(JSON.stringify({valid:true, success: true}));
-        }
-      });
+      var command = JSON.parse(req.body.parameters);
+      var violations = validate(command, handle);
+      if(violations.length){
+        endWithInvalid(res, violations);
+      }else{
+        handle(command, function(err, result){
+          if(err){
+            endWithException(res, err, options.debug);
+          }else{
+            res.end(JSON.stringify({valid:true, success: true}));
+          }
+        });
+      }
     }
   }
+  
   function query(req, res, next){
     var handle = findExecutable(req.params.name, 'query');
     if(handle == null){
       endWithException(res, "not a query", options.debug);
     }else{
-      handle(JSON.parse(req.body.parameters), function(err, result){
-        if(err){
-          endWithException(res, err, options.debug);
-        }else{
-          res.end(JSON.stringify({valid:true, success: true, result: result}));
-        }
-      });
+      var query = JSON.parse(req.body.parameters);
+      var violations = validate(query, handle);
+      if(violations.length){
+        endWithInvalid(res, violations);
+      }else{
+        handle(query, function(err, result){
+          if(err){
+            endWithException(res, err, options.debug);
+          }else{
+            res.end(JSON.stringify({valid:true, success: true, result: result}));
+          }
+        });
+      }
     }
   }
 
