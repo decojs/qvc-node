@@ -1,4 +1,5 @@
 var urlrouter = require('urlrouter');
+var validate = require('./src/validate');
 
 function tryToCall(func, debug){
   return function(req, res, next){
@@ -50,30 +51,6 @@ function endWithException(res, error, debug){
 
 function endWithInvalid(res, violations){
   res.end(JSON.stringify({valid:false, success: false, violations: violations}));
-}
-
-function validate(executable, handler){
-  return Object.keys(handler.constraints || {})
-  .map(function(key){
-    return {
-      fieldName: key,
-      constraints: Array.isArray(handler.constraints[key]) ? handler.constraints[key] : [handler.constraints[key]],
-      value: key.split('.').reduce(function(object, key){
-        return object[key];
-      }, executable)
-    }
-  }).map(function(field){
-    return {
-      fieldName: field.fieldName,
-      message: field.constraints.filter(function(constraint){
-        return !constraint.isValid(field.value);
-      }).map(function(constraint){
-        return constraint.message;
-      })[0]
-    };
-  }).filter(function(result){
-    return result.message;
-  });
 }
 
 function getConstraints(constraints){
@@ -129,7 +106,7 @@ function qvc(options){
       endWithException(res, "not a command", options.debug);
     }else{
       var command = JSON.parse(req.body.parameters);
-      var violations = validate(command, handle);
+      var violations = validate(command, handle.constraint);
       if(violations.length){
         endWithInvalid(res, violations);
       }else{
@@ -150,7 +127,7 @@ function qvc(options){
       endWithException(res, "not a query", options.debug);
     }else{
       var query = JSON.parse(req.body.parameters);
-      var violations = validate(query, handle);
+      var violations = validate(query, handle.constraint);
       if(violations.length){
         endWithInvalid(res, violations);
       }else{
@@ -172,7 +149,7 @@ function qvc(options){
   });
 }
 
-qvc.command = require('./command');
-qvc.query = require('./query');
+qvc.command = require('./src/command');
+qvc.query = require('./src/query');
 
 module.exports = qvc;
