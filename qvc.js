@@ -50,7 +50,7 @@ function jsonError(error){
   return error;
 }
 
-function qvc(options){
+function qvc(){
   var options = Array.prototype.filter.call(arguments, function(argument){
     return !Array.isArray(argument);
   })[0]||{};
