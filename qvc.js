@@ -57,7 +57,7 @@ function qvc(){
     return findExecutable(name, 'command')
     .then(function(handle){
       var command = JSON.parse(parameters);
-      var violations = validate(command, handle.constraint);
+      var violations = validate(command, handle.constraints);
       if(violations.length){
         return {valid:false, success: false, violations: violations};
       }else{
@@ -65,7 +65,10 @@ function qvc(){
       }
     }, function(){
       throw "not a command";
-    }).then(function(){
+    }).then(function(result){
+      if(result && 'valid' in result && 'success' in result){
+        return result;
+      }
       return {valid: true, success: true};
     });
   }
@@ -74,7 +77,7 @@ function qvc(){
     return findExecutable(name, 'query')
     .then(function(handle){
       var query = JSON.parse(parameters);
-      var violations = validate(query, handle.constraint);
+      var violations = validate(query, handle.constraints);
       if(violations.length){
         return {valid:false, success: false, violations: violations};
       }else{
@@ -83,6 +86,9 @@ function qvc(){
     }, function(){
       throw "not a query";
     }).then(function(result){
+      if(result && 'valid' in result && 'success' in result){
+        return result;
+      }
       return {valid: true, success: true, result: result};
     });
   }
