@@ -1,7 +1,8 @@
 var urlrouter = require('urlrouter');
 var validate = require('./src/validate');
 var getConstraints = require('./src/getConstraints');
-var Promise = require('promise');
+var parseArguments = require('./src/parseArguments');
+var executableLookup = require('./src/findExecutable');
 
 function tryToCall(func, debug){
   return function(req, res, next){
@@ -16,19 +17,6 @@ function tryToCall(func, debug){
       res.end(response);
     })
   };
-}
-
-function flatten(list){
-  return list.reduce(function(a,b){
-    return a.concat(b);
-  },[]);
-}
-
-function objectify(list){
-  return list.reduce(function(a,b){
-    a[b.executableName] = b;
-    return a;
-  },Object.create(null));
 }
 
 function jsonError(error){
@@ -51,29 +39,10 @@ function jsonError(error){
 }
 
 function qvc(){
-  var options = Array.prototype.filter.call(arguments, function(argument){
-    return !Array.isArray(argument);
-  })[0]||{};
+  var args = parseArguments(arguments);
   
-  var allExecutables = flatten(Array.prototype.filter.call(arguments, function(argument){
-    return Array.isArray(argument);
-  }));
-  
-  var executables = {
-    commandList: objectify(allExecutables.filter(function(e){return e.type == 'command';})),
-    queryList: objectify(allExecutables.filter(function(e){return e.type == 'query';})),
-    executableList: objectify(allExecutables)
-  };
-
-  function findExecutable(name, type){
-    var handler = executables[type+'List'][name];
-    
-    if(type != 'executable' && (handler == null || handler.type != type)){
-      return Promise.reject();
-    }else{
-      return Promise.resolve(handler);
-    }
-  }
+  var options = args.options;
+  var findExecutable = executableLookup(args.allExecutables);
 
   function constraints(name){
     return findExecutable(name, 'executable')
