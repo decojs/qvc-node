@@ -66,7 +66,7 @@ function qvc(){
     }, function(){
       throw "not a command";
     }).then(function(result){
-      if(result && 'valid' in result && 'success' in result){
+      if(result && typeof result === 'object' && 'valid' in result && 'success' in result){
         return result;
       }
       return {valid: true, success: true};
@@ -86,7 +86,7 @@ function qvc(){
     }, function(){
       throw "not a query";
     }).then(function(result){
-      if(result && 'valid' in result && 'success' in result){
+      if(result && typeof result === 'object' && 'valid' in result && 'success' in result){
         return result;
       }
       return {valid: true, success: true, result: result};
