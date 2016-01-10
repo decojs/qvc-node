@@ -41,7 +41,7 @@ function jsonError(error){
 function qvc(){
   var args = parseArguments(arguments);
   
-  var options = args.options;
+  var options = args.options || {};
   var findExecutable = executableLookup(args.allExecutables);
 
   function constraints(name){
@@ -96,7 +96,12 @@ function qvc(){
   return urlrouter(function(app){
     app.post('/command/:name', tryToCall(command, options.debug));
     app.post('/query/:name', tryToCall(query, options.debug));
-    app.get('/constraints/:name', tryToCall(constraints, options.debug));
+    app.get('/constraints/:name', function(req, res, next){
+      if(options.cacheConstraints !== false){
+        res.setHeader('Cache-Control', 'private, max-age='+(options.cacheConstraints||84600));
+      }
+      next();
+    }, tryToCall(constraints, options.debug));
   });
 }
 
